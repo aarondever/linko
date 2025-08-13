@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	ENV         string // Environment type (development, production)
+	AppEnv      string // Environment type (development, production)
 	Host        string
 	Port        int
 	DatabaseURL string
@@ -31,7 +31,7 @@ func Load() (*Config, error) {
 	}
 
 	cfg := &Config{
-		ENV:      getStringEnv("ENV", "development"),
+		AppEnv:   getStringEnv("APP_ENV", "development"),
 		Host:     getStringEnv("HOST", "0.0.0.0"),
 		Port:     getIntEnv("PORT", 8080),
 		DBName:   getStringEnv("DB_NAME", "url_forg"),

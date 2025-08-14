@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/aarondever/url-forg/internal/models"
 	"github.com/aarondever/url-forg/internal/services"
+	"github.com/aarondever/url-forg/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )
@@ -26,18 +27,18 @@ func (handler *URLHandler) RegisterRoutes(router *chi.Mux) {
 
 func (handler *URLHandler) ShortenURL(responseWriter http.ResponseWriter, request *http.Request) {
 	shortenRequest := models.ShortenURLRequest{}
-	if err := decodeRequestBody(request, &shortenRequest); err != nil {
-		respondWithError(responseWriter, http.StatusBadRequest, "Invalid request body")
+	if err := utils.DecodeRequestBody(request, &shortenRequest); err != nil {
+		utils.RespondWithError(responseWriter, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
 	shortCode, err := handler.urlService.ShortenURL(request.Context(), shortenRequest.URL)
 	if err != nil {
-		respondWithError(responseWriter, http.StatusInternalServerError, err.Error())
+		utils.RespondWithError(responseWriter, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	respondWithJSON(responseWriter, http.StatusOK, models.ShortenURLResponse{
+	utils.RespondWithJSON(responseWriter, http.StatusOK, models.ShortenURLResponse{
 		ShortCode: shortCode,
 	})
 }
@@ -46,11 +47,11 @@ func (handler *URLHandler) GetURL(responseWriter http.ResponseWriter, request *h
 	shortCode := request.PathValue("shortCode")
 	originalURL, err := handler.urlService.GetURL(request.Context(), shortCode)
 	if err != nil {
-		respondWithError(responseWriter, http.StatusNotFound, "URL not found")
+		utils.RespondWithError(responseWriter, http.StatusNotFound, "URL not found")
 		return
 	}
 
-	respondWithJSON(responseWriter, http.StatusOK, models.GetURLResponse{
+	utils.RespondWithJSON(responseWriter, http.StatusOK, models.GetURLResponse{
 		OriginalURL: originalURL,
 	})
 }
@@ -59,7 +60,7 @@ func (handler *URLHandler) RedirectShortURL(responseWriter http.ResponseWriter, 
 	shortCode := request.PathValue("shortCode")
 	originalURL, err := handler.urlService.GetURL(request.Context(), shortCode)
 	if err != nil {
-		respondWithError(responseWriter, http.StatusNotFound, "URL not found")
+		utils.RespondWithError(responseWriter, http.StatusNotFound, "URL not found")
 		return
 	}
 

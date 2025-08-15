@@ -17,12 +17,12 @@ import (
 const URLCollectionName = "urls"
 
 type URLService struct {
-	cfg           *config.Config
 	db            *database.Database
+	cfg           *config.Config
 	urlCollection *mongo.Collection
 }
 
-func NewURLService(cfg *config.Config, db *database.Database) *URLService {
+func NewURLService(db *database.Database, cfg *config.Config) *URLService {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -37,8 +37,8 @@ func NewURLService(cfg *config.Config, db *database.Database) *URLService {
 	}
 
 	return &URLService{
-		cfg:           cfg,
 		db:            db,
+		cfg:           cfg,
 		urlCollection: collection,
 	}
 }

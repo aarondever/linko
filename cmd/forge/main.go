@@ -21,14 +21,13 @@ import (
 )
 
 type Application struct {
-	cfg         *config.Config
-	db          *database.Database
-	webServer   *http.Server
-	router      *chi.Mux
-	services    *services.ServiceContainer
-	handlers    *handlers.HandlerContainer
-	shutdownCtx context.Context
-	metrics     *models.ApplicationMetrics
+	cfg       *config.Config
+	db        *database.Database
+	webServer *http.Server
+	router    *chi.Mux
+	services  *services.Services
+	handlers  *handlers.Handlers
+	metrics   *models.ApplicationMetrics
 }
 
 func main() {
@@ -79,24 +78,6 @@ func main() {
 	}
 }
 
-func (app *Application) initializeServices() (*services.ServiceContainer, error) {
-	// Initialize each service - add new services here
-	serviceContainer := &services.ServiceContainer{
-		URLService: services.NewURLService(app.cfg, app.db),
-	}
-
-	return serviceContainer, nil
-}
-
-func (app *Application) initializeHandlers() (*handlers.HandlerContainer, error) {
-	// Initialize each handler with its service dependencies
-	handlerContainer := &handlers.HandlerContainer{
-		URLHandler: handlers.NewURLHandler(app.services.URLService),
-	}
-
-	return handlerContainer, nil
-}
-
 func (app *Application) setupRouter() {
 	// Setup API routes
 	app.handlers.URLHandler.RegisterRoutes(app.router)
@@ -110,7 +91,7 @@ func initializeApplication() (*Application, error) {
 	}
 
 	time.Local = cfg.Timezone
-	log.Printf("Timezone: %s\n", cfg.Timezone)
+	log.Printf("Application timezone: %s", cfg.Timezone)
 
 	// Initialize database connection
 	db, err := database.InitializeDatabase(cfg)
@@ -118,24 +99,19 @@ func initializeApplication() (*Application, error) {
 		return nil, fmt.Errorf("database initialization failed: %w", err)
 	}
 
-	app := &Application{
-		cfg:         cfg,
-		db:          db,
-		router:      chi.NewRouter(),
-		shutdownCtx: context.Background(),
-		metrics:     &models.ApplicationMetrics{StartTime: time.Now()},
-	}
-
 	// Initialize all services with dependency injection
-	app.services, err = app.initializeServices()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize services: %w", err)
-	}
+	allServices := services.InitializeServices(db, cfg)
 
 	// Initialize all handlers with service dependencies
-	app.handlers, err = app.initializeHandlers()
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize handlers: %w", err)
+	allHandlers := handlers.InitializeHandlers(allServices)
+
+	app := &Application{
+		cfg:      cfg,
+		db:       db,
+		router:   chi.NewRouter(),
+		services: allServices,
+		handlers: allHandlers,
+		metrics:  &models.ApplicationMetrics{StartTime: time.Now()},
 	}
 
 	return app, nil
@@ -161,22 +137,25 @@ func (app *Application) initiateShutdown() {
 
 	log.Printf("Graceful shutdown completed in %v", time.Since(shutdownStart))
 	log.Printf("Final application metrics:\n  Start Time: %s\n  Total Uptime: %v",
-		app.metrics.StartTime.Format(time.RFC3339),
-		app.metrics.TotalUptime)
+		app.metrics.StartTime.Format(time.RFC3339), app.metrics.TotalUptime)
 }
 
 // cleanup performs cleanup operations for application shutdown
 func (app *Application) cleanup() {
-	log.Printf("Performing application cleanup...")
+	log.Println("Performing application cleanup...")
 
 	if app.db.Mongo != nil {
-		log.Printf("Closing database connection...")
-		if err := app.db.Mongo.Disconnect(app.shutdownCtx); err != nil {
+		log.Println("Closing database connection...")
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := app.db.Mongo.Disconnect(ctx); err != nil {
 			log.Printf("Database disconnection error: %v", err)
 			return
 		}
-		log.Printf("Database connection closed successfully")
+		log.Println("Database connection closed successfully")
 	}
 
-	log.Printf("Application cleanup completed")
+	log.Println("Application cleanup completed")
 }

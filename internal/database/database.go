@@ -41,35 +41,18 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 	}
 
 	// Initialize collections
-	if err = database.initURLCollection(ctx); err != nil {
-		return nil, err
-	}
+	database.urlCollection = database.initURLCollection(ctx)
 
 	return database, nil
 }
-
-func (database *Database) createCollection(ctx context.Context, collectionName string) error {
-	// If collection exists, skip creation
-	if database.isCollectionExists(ctx, collectionName) {
-		return nil
-	}
-
-	// Create collection
-	if err := database.db.CreateCollection(ctx, collectionName); err != nil {
-		return err
-	}
-
-	log.Printf("Collection '%s' created successfully", collectionName)
-	return nil
-}
-
-func (database *Database) createCollectionWithValidation(
+func (database *Database) createCollection(
 	ctx context.Context,
 	collectionName string,
 	validator bson.M,
 ) error {
 	// If collection exists, skip creation
-	if database.isCollectionExists(ctx, collectionName) {
+	collections, _ := database.db.ListCollectionNames(ctx, bson.M{"name": collectionName})
+	if len(collections) > 0 {
 		return nil
 	}
 
@@ -81,12 +64,6 @@ func (database *Database) createCollectionWithValidation(
 
 	log.Printf("Collection '%s' created successfully", collectionName)
 	return nil
-}
-
-func (database *Database) isCollectionExists(ctx context.Context, collectionName string) bool {
-	collections, _ := database.db.ListCollectionNames(ctx, bson.M{"name": collectionName})
-
-	return len(collections) > 0
 }
 
 func (database *Database) createIndexes(

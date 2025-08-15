@@ -8,54 +8,11 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"log"
 	"time"
 )
 
 const urlCollectionName = "urls"
-
-func (database *Database) initURLCollection(ctx context.Context) error {
-	if err := database.createCollectionWithValidation(ctx, urlCollectionName, bson.M{
-		"$jsonSchema": bson.M{
-			"bsonType": "object",
-			"required": []string{"short_code", "url"},
-			"properties": bson.M{
-				"short_code": bson.M{
-					"bsonType":    "string",
-					"pattern":     "^[a-zA-Z0-9]{8}$",
-					"description": "must be a string of exactly 8 alphanumeric characters",
-				},
-				"url": bson.M{
-					"bsonType":    "string",
-					"pattern":     "^https?://.+",
-					"description": "must be a valid URL starting with http:// or https://",
-				},
-				"created_at": bson.M{
-					"bsonType":    "date",
-					"description": "timestamp when the URL was shortened",
-				},
-			},
-		},
-	}); err != nil {
-		return fmt.Errorf("failed to create URL collection: %w", err)
-	}
-
-	database.urlCollection = database.db.Collection(urlCollectionName)
-
-	if err := database.createIndexes(ctx, database.urlCollection, []mongo.IndexModel{
-		{
-			Keys:    bson.D{{Key: "short_code", Value: 1}},
-			Options: options.Index().SetUnique(true).SetName("short_code_unique"),
-		},
-		{
-			Keys:    bson.D{{Key: "url", Value: 1}},
-			Options: options.Index().SetName("url_index"),
-		},
-	}); err != nil {
-		return fmt.Errorf("failed to create URL indexes: %w", err)
-	}
-
-	return nil
-}
 
 func (database *Database) IsURLShortCodeExists(ctx context.Context, shortCode string) (bool, error) {
 	var existing models.URLMapping
@@ -91,4 +48,48 @@ func (database *Database) GetURL(ctx context.Context, shortCode string) (string,
 		return "", fmt.Errorf("error retrieving URL mapping: %w", err)
 	}
 	return mapping.URL, nil
+}
+
+func (database *Database) initURLCollection(ctx context.Context) *mongo.Collection {
+	if err := database.createCollection(ctx, urlCollectionName, bson.M{
+		"$jsonSchema": bson.M{
+			"bsonType": "object",
+			"required": []string{"short_code", "url"},
+			"properties": bson.M{
+				"short_code": bson.M{
+					"bsonType":    "string",
+					"pattern":     "^[a-zA-Z0-9]{8}$",
+					"description": "must be a string of exactly 8 alphanumeric characters",
+				},
+				"url": bson.M{
+					"bsonType":    "string",
+					"pattern":     "^https?://.+",
+					"description": "must be a valid URL starting with http:// or https://",
+				},
+				"created_at": bson.M{
+					"bsonType":    "date",
+					"description": "timestamp when the URL was shortened",
+				},
+			},
+		},
+	}); err != nil {
+		log.Fatalf("Failed to create URL collection: %v", err)
+	}
+
+	collection := database.db.Collection(urlCollectionName)
+
+	if err := database.createIndexes(ctx, collection, []mongo.IndexModel{
+		{
+			Keys:    bson.D{{Key: "short_code", Value: 1}},
+			Options: options.Index().SetUnique(true).SetName("short_code_unique"),
+		},
+		{
+			Keys:    bson.D{{Key: "url", Value: 1}},
+			Options: options.Index().SetName("url_index"),
+		},
+	}); err != nil {
+		log.Fatalf("Failed to create URL indexes: %v", err)
+	}
+
+	return collection
 }

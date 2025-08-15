@@ -2,44 +2,20 @@ package services
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"github.com/aarondever/url-forg/internal/config"
 	"github.com/aarondever/url-forg/internal/database"
-	"github.com/aarondever/url-forg/internal/models"
 	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"log"
-	"time"
 )
 
-const URLCollectionName = "urls"
-
 type URLService struct {
-	db            *database.Database
-	cfg           *config.Config
-	urlCollection *mongo.Collection
+	db  *database.Database
+	cfg *config.Config
 }
 
 func NewURLService(db *database.Database, cfg *config.Config) *URLService {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := db.CreateCollectionWithValidation(ctx, URLCollectionName, models.GetURLValidator()); err != nil {
-		return nil
-	}
-
-	collection := db.MongoDB.Collection(URLCollectionName)
-
-	if err := db.CreateIndexes(ctx, collection, models.GetURLIndexes()); err != nil {
-		return nil
-	}
-
 	return &URLService{
-		db:            db,
-		cfg:           cfg,
-		urlCollection: collection,
+		db:  db,
+		cfg: cfg,
 	}
 }
 
@@ -50,15 +26,14 @@ func (service *URLService) ShortenURL(ctx context.Context, url string) (string, 
 
 	// Check if short code already exists (handle collision)
 	for {
-		var existing models.URLMapping
-		if err := service.urlCollection.FindOne(ctx, bson.M{"short_code": shortCode}).Decode(&existing); err != nil {
-			if errors.Is(err, mongo.ErrNoDocuments) {
-				// Short code is available
-				break
-			}
-
-			log.Printf("Error checking existing short code: %v", err)
+		exists, err := service.db.IsURLShortCodeExists(ctx, shortCode)
+		if err != nil {
 			return "", err
+		}
+
+		if !exists {
+			// Short code is available
+			break
 		}
 
 		// Collision detected, generate new short code
@@ -66,16 +41,8 @@ func (service *URLService) ShortenURL(ctx context.Context, url string) (string, 
 		shortCode = uuidStr[:8]
 	}
 
-	// Store in MongoDB
-	mapping := models.URLMapping{
-		ShortCode: shortCode,
-		URL:       url,
-		CreatedAt: time.Now(),
-	}
-
-	_, err := service.urlCollection.InsertOne(ctx, mapping)
+	_, err := service.db.CreateURLShortCode(ctx, shortCode, url)
 	if err != nil {
-		log.Printf("Error inserting URL mapping: %v", err)
 		return "", err
 	}
 
@@ -83,15 +50,10 @@ func (service *URLService) ShortenURL(ctx context.Context, url string) (string, 
 }
 
 func (service *URLService) GetURL(ctx context.Context, shortCode string) (string, error) {
-	var mapping models.URLMapping
-	if err := service.urlCollection.FindOne(ctx, bson.M{"short_code": shortCode}).Decode(&mapping); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return "", fmt.Errorf("short code not found: %s", shortCode)
-		}
-
-		log.Printf("Error retrieving URL mapping: %v", err)
+	url, err := service.db.GetURL(ctx, shortCode)
+	if err != nil {
 		return "", err
 	}
 
-	return mapping.URL, nil
+	return url, nil
 }

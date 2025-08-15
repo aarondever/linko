@@ -11,8 +11,9 @@ import (
 )
 
 type Database struct {
-	Mongo   *mongo.Client
-	MongoDB *mongo.Database
+	Mongo         *mongo.Client
+	db            *mongo.Database
+	urlCollection *mongo.Collection
 }
 
 func InitializeDatabase(config *config.Config) (*Database, error) {
@@ -35,21 +36,26 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 	log.Println("Connected to MongoDB")
 
 	database := &Database{
-		Mongo:   client,
-		MongoDB: client.Database(config.DBName),
+		Mongo: client,
+		db:    client.Database(config.DBName),
+	}
+
+	// Initialize collections
+	if err = database.initURLCollection(ctx); err != nil {
+		return nil, err
 	}
 
 	return database, nil
 }
 
-func (database *Database) CreateCollection(ctx context.Context, collectionName string) error {
+func (database *Database) createCollection(ctx context.Context, collectionName string) error {
 	// If collection exists, skip creation
 	if database.isCollectionExists(ctx, collectionName) {
 		return nil
 	}
 
 	// Create collection
-	if err := database.MongoDB.CreateCollection(ctx, collectionName); err != nil {
+	if err := database.db.CreateCollection(ctx, collectionName); err != nil {
 		return err
 	}
 
@@ -57,7 +63,7 @@ func (database *Database) CreateCollection(ctx context.Context, collectionName s
 	return nil
 }
 
-func (database *Database) CreateCollectionWithValidation(
+func (database *Database) createCollectionWithValidation(
 	ctx context.Context,
 	collectionName string,
 	validator bson.M,
@@ -69,7 +75,7 @@ func (database *Database) CreateCollectionWithValidation(
 
 	// Create collection with validation schema
 	opts := options.CreateCollection().SetValidator(validator)
-	if err := database.MongoDB.CreateCollection(ctx, collectionName, opts); err != nil {
+	if err := database.db.CreateCollection(ctx, collectionName, opts); err != nil {
 		return err
 	}
 
@@ -78,12 +84,12 @@ func (database *Database) CreateCollectionWithValidation(
 }
 
 func (database *Database) isCollectionExists(ctx context.Context, collectionName string) bool {
-	collections, _ := database.MongoDB.ListCollectionNames(ctx, bson.M{"name": collectionName})
+	collections, _ := database.db.ListCollectionNames(ctx, bson.M{"name": collectionName})
 
 	return len(collections) > 0
 }
 
-func (database *Database) CreateIndexes(
+func (database *Database) createIndexes(
 	ctx context.Context,
 	collection *mongo.Collection,
 	indexes []mongo.IndexModel,

@@ -3,7 +3,7 @@ package config
 import (
 	"fmt"
 	"github.com/joho/godotenv"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 )
@@ -19,16 +19,20 @@ type Config struct {
 
 func Load() (*Config, error) {
 	if err := godotenv.Load(); err != nil {
-		log.Print("No .env file found")
+		slog.Info("No .env file found")
 	}
 
 	// Get timezone from environment or use UTC as default
 	tzName := getStringEnv("TZ", "UTC")
 	timezone, err := time.LoadLocation(tzName)
 	if err != nil {
-		log.Printf("Invalid timezone: %s, using UTC instead", tzName)
+		slog.Warn("Invalid timezone, using UTC instead", "timezone", tzName)
 		timezone = time.UTC
 	}
+
+	// Config timezone
+	time.Local = timezone
+	slog.Info("Application timezone configured", "timezone", timezone.String())
 
 	cfg := &Config{
 		AppEnv:   getStringEnv("APP_ENV", "development"),
@@ -66,7 +70,10 @@ func getIntEnv(key string, defaultValue int) int {
 			if char >= '0' && char <= '9' {
 				result = result*10 + int(char-'0')
 			} else {
-				log.Printf("Invalid integer value for %s: %s, using default: %d", key, value, defaultValue)
+				slog.Warn("Invalid integer value, using default",
+					"key", key,
+					"value", value,
+					"default", defaultValue)
 				return defaultValue
 			}
 		}

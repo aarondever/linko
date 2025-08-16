@@ -8,7 +8,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 )
 
@@ -73,7 +74,8 @@ func (database *Database) initURLCollection(ctx context.Context) *mongo.Collecti
 			},
 		},
 	}); err != nil {
-		log.Fatalf("Failed to create URL collection: %v", err)
+		slog.Error("Failed to create URL collection", "error", err)
+		os.Exit(1)
 	}
 
 	collection := database.db.Collection(urlCollectionName)
@@ -88,7 +90,8 @@ func (database *Database) initURLCollection(ctx context.Context) *mongo.Collecti
 			Options: options.Index().SetName("url_index"),
 		},
 	}); err != nil {
-		log.Fatalf("Failed to create URL indexes: %v", err)
+		slog.Error("Failed to create URL indexes", "error", err)
+		os.Exit(1)
 	}
 
 	return collection

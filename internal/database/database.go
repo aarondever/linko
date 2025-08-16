@@ -6,7 +6,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"log"
+	"log/slog"
 	"time"
 )
 
@@ -23,17 +23,17 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 	// Connect to MongoDB
 	client, err := mongo.Connect(options.Client().ApplyURI(config.DatabaseURL))
 	if err != nil {
-		log.Printf("Failed to connect to MongoDB: %v", err)
+		slog.Error("Failed to connect to MongoDB", "error", err)
 		return nil, err
 	}
 
 	// Test MongoDB connection
 	if err = client.Ping(ctx, nil); err != nil {
-		log.Printf("Failed to ping MongoDB: %v", err)
+		slog.Error("Failed to ping MongoDB", "error", err)
 		return nil, err
 	}
 
-	log.Println("Connected to MongoDB")
+	slog.Info("Connected to MongoDB")
 
 	database := &Database{
 		Mongo: client,
@@ -62,7 +62,7 @@ func (database *Database) createCollection(
 		return err
 	}
 
-	log.Printf("Collection '%s' created successfully", collectionName)
+	slog.Info("Collection created successfully", "collection_name", collectionName)
 	return nil
 }
 

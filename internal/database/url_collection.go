@@ -3,13 +3,11 @@ package database
 import (
 	"context"
 	"errors"
-	"fmt"
 	"github.com/aarondever/url-forg/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"log/slog"
-	"os"
 	"time"
 )
 
@@ -21,38 +19,63 @@ func (database *Database) IsURLShortCodeExists(ctx context.Context, shortCode st
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return false, nil
 		}
-		return false, fmt.Errorf("error checking existing short code: %w", err)
+
+		slog.Error("Failed checking existing short code", "error", err)
+		return false, err
 	}
+
 	return true, nil
 }
 
-func (database *Database) CreateURLShortCode(ctx context.Context, shortCode, url string) (*mongo.InsertOneResult, error) {
-	mapping := models.URLMapping{
-		ShortCode: shortCode,
-		URL:       url,
-		CreatedAt: time.Now(),
+func (database *Database) GetURLMappingByID(ctx context.Context, id string) (*models.URLMapping, error) {
+	mappingID, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		slog.Error("Failed parse mapping ID", "error", err)
+		return nil, err
 	}
 
-	result, err := database.urlCollection.InsertOne(ctx, mapping)
-	if err != nil {
-		return nil, fmt.Errorf("error creating URL short code: %w", err)
+	var mapping models.URLMapping
+	if err = database.urlCollection.FindOne(ctx, bson.M{"_id": mappingID}).Decode(&mapping); err != nil {
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			slog.Error("Failed find URL mapping", "error", err)
+		}
+
+		return nil, err
 	}
-	return result, nil
+
+	return &mapping, nil
+}
+
+func (database *Database) CreateURLShortCode(
+	ctx context.Context,
+	params models.URLMapping,
+) (*models.URLMapping, error) {
+	params.CreatedAt = time.Now()
+
+	result, err := database.urlCollection.InsertOne(ctx, params)
+	if err != nil {
+		slog.Error("Failed insert URL short code", "error", err)
+		return nil, err
+	}
+
+	return database.GetURLMappingByID(ctx, result.InsertedID.(bson.ObjectID).Hex())
 }
 
 func (database *Database) GetURL(ctx context.Context, shortCode string) (string, error) {
 	var mapping models.URLMapping
 	if err := database.urlCollection.FindOne(ctx, bson.M{"short_code": shortCode}).Decode(&mapping); err != nil {
-		if errors.Is(err, mongo.ErrNoDocuments) {
-			return "", fmt.Errorf("short code not found: %s", shortCode)
+		if !errors.Is(err, mongo.ErrNoDocuments) {
+			slog.Error("Failed find URL mapping", "error", err)
 		}
-		return "", fmt.Errorf("error retrieving URL mapping: %w", err)
+
+		return "", err
 	}
+
 	return mapping.URL, nil
 }
 
 func (database *Database) initURLCollection(ctx context.Context) *mongo.Collection {
-	if err := database.createCollection(ctx, urlCollectionName, bson.M{
+	database.createCollection(ctx, urlCollectionName, bson.M{
 		"$jsonSchema": bson.M{
 			"bsonType": "object",
 			"required": []string{"short_code", "url"},
@@ -73,26 +96,22 @@ func (database *Database) initURLCollection(ctx context.Context) *mongo.Collecti
 				},
 			},
 		},
-	}); err != nil {
-		slog.Error("Failed to create URL collection", "error", err)
-		os.Exit(1)
-	}
+	})
 
 	collection := database.db.Collection(urlCollectionName)
 
-	if err := database.createIndexes(ctx, collection, []mongo.IndexModel{
+	database.createIndexes(ctx, collection, []mongo.IndexModel{
+		// Index on created_at for chronological queries
+		{
+			Keys:    bson.D{{Key: "created_at", Value: -1}},
+			Options: options.Index().SetName("created_at_desc"),
+		},
+		// Index on short_code for finding url by code
 		{
 			Keys:    bson.D{{Key: "short_code", Value: 1}},
 			Options: options.Index().SetUnique(true).SetName("short_code_unique"),
 		},
-		{
-			Keys:    bson.D{{Key: "url", Value: 1}},
-			Options: options.Index().SetName("url_index"),
-		},
-	}); err != nil {
-		slog.Error("Failed to create URL indexes", "error", err)
-		os.Exit(1)
-	}
+	})
 
 	return collection
 }

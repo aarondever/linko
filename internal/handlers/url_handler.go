@@ -26,13 +26,13 @@ func (handler *URLHandler) RegisterRoutes(router *chi.Mux) {
 }
 
 func (handler *URLHandler) ShortenURL(responseWriter http.ResponseWriter, request *http.Request) {
-	shortenRequest := models.ShortenURLRequest{}
-	if err := utils.DecodeRequestBody(request, &shortenRequest); err != nil {
+	var params models.ShortenURLRequest
+	if err := utils.DecodeRequestBody(request, &params); err != nil {
 		utils.RespondWithError(responseWriter, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	shortCode, err := handler.urlService.ShortenURL(request.Context(), shortenRequest.URL)
+	shortCode, err := handler.urlService.ShortenURL(request.Context(), params.URL)
 	if err != nil {
 		utils.RespondWithError(responseWriter, http.StatusInternalServerError, err.Error())
 		return

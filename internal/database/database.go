@@ -7,6 +7,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"log/slog"
+	"os"
 	"time"
 )
 
@@ -45,36 +46,30 @@ func InitializeDatabase(config *config.Config) (*Database, error) {
 
 	return database, nil
 }
-func (database *Database) createCollection(
-	ctx context.Context,
-	collectionName string,
-	validator bson.M,
-) error {
+
+func (database *Database) createCollection(ctx context.Context, collectionName string, validator bson.M) {
 	// If collection exists, skip creation
 	collections, _ := database.db.ListCollectionNames(ctx, bson.M{"name": collectionName})
 	if len(collections) > 0 {
-		return nil
+		return
 	}
 
 	// Create collection with validation schema
 	opts := options.CreateCollection().SetValidator(validator)
 	if err := database.db.CreateCollection(ctx, collectionName, opts); err != nil {
-		return err
+		slog.Error("Failed to create collection", "collection", collectionName, "error", err)
+		os.Exit(1)
 	}
 
-	slog.Info("Collection created successfully", "collection_name", collectionName)
-	return nil
+	slog.Info("Collection created successfully", "collection", collectionName)
 }
 
-func (database *Database) createIndexes(
-	ctx context.Context,
-	collection *mongo.Collection,
-	indexes []mongo.IndexModel,
-) error {
+func (database *Database) createIndexes(ctx context.Context, collection *mongo.Collection, indexes []mongo.IndexModel) {
 	_, err := collection.Indexes().CreateMany(ctx, indexes)
 	if err != nil {
-		return err
+		slog.Error("Failed to create indexes", "collection", collection.Name(), "error", err)
+		os.Exit(1)
 	}
 
-	return nil
+	slog.Info("Indexes created successfully", "collection", collection.Name())
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/aarondever/url-forg/internal/config"
 	"github.com/aarondever/url-forg/internal/database"
+	"github.com/aarondever/url-forg/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -41,7 +42,12 @@ func (service *URLService) ShortenURL(ctx context.Context, url string) (string, 
 		shortCode = uuidStr[:8]
 	}
 
-	_, err := service.db.CreateURLShortCode(ctx, shortCode, url)
+	urlMapping := models.URLMapping{
+		ShortCode: shortCode,
+		URL:       url,
+	}
+
+	_, err := service.db.CreateURLShortCode(ctx, urlMapping)
 	if err != nil {
 		return "", err
 	}

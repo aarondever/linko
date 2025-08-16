@@ -1,6 +1,7 @@
 package models
 
 import (
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"time"
 )
 
@@ -18,7 +19,8 @@ type GetURLResponse struct {
 
 // URLMapping represents the URL document in MongoDB
 type URLMapping struct {
-	ShortCode string    `bson:"short_code" json:"short_code"`
-	URL       string    `bson:"url" json:"url"`
-	CreatedAt time.Time `bson:"created_at" json:"created_at"`
+	ID        bson.ObjectID `json:"id" bson:"_id,omitempty"`
+	ShortCode string        `bson:"short_code" json:"short_code"`
+	URL       string        `bson:"url" json:"url"`
+	CreatedAt time.Time     `bson:"created_at" json:"created_at"`
 }

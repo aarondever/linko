@@ -38,43 +38,8 @@ type LoggingConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
-	if err := godotenv.Load(); err != nil {
-		slog.Info("No .env file found")
-	}
-
-	tzName := getStringEnv("TZ", "UTC")
-	timezone, err := time.LoadLocation(tzName)
-	if err != nil {
-		slog.Warn("Invalid timezone, using UTC instead", "timezone", tzName, "error", err)
-		timezone = time.UTC
-	}
-
-	// Default config from environment variables
-	config := &Config{
-		AppEnv:   getStringEnv("APP_ENV", "development"),
-		Timezone: timezone,
-	}
-
-	// Server config
-	config.Server = ServerConfig{
-		Host: getStringEnv("HOST", "0.0.0.0"),
-		Port: getIntEnv("PORT", 8080),
-	}
-
-	// Database config
-	config.Database = DatabaseConfig{
-		Host:     getStringEnv("DB_HOST", "localhost"),
-		Port:     getIntEnv("DB_PORT", 27017),
-		Username: getStringEnv("DB_USER", "mongo"),
-		Password: getStringEnv("DB_PASS", "mongo"),
-		Name:     getStringEnv("DB_NAME", "notiflow"),
-	}
-
-	// Logging config
-	config.Logging = LoggingConfig{
-		Level:  getStringEnv("LOG_LEVEL", "info"),
-		Format: getStringEnv("LOG_FORMAT", "text"),
-	}
+	// Load config from environment variables
+	config := loadConfigFromEnv()
 
 	// Parse command line flags
 	var configFile string
@@ -131,6 +96,49 @@ func (config *Config) configLogger() {
 
 	logger := slog.New(logHandler)
 	slog.SetDefault(logger)
+}
+
+// loadConfigFromEnv loads configuration from environment variables
+func loadConfigFromEnv() *Config {
+	if err := godotenv.Load(); err != nil {
+		slog.Info("No .env file found")
+	}
+
+	tzName := getStringEnv("TZ", "UTC")
+	timezone, err := time.LoadLocation(tzName)
+	if err != nil {
+		slog.Warn("Invalid timezone, using UTC instead", "timezone", tzName, "error", err)
+		timezone = time.UTC
+	}
+
+	// Default config from environment variables
+	config := &Config{
+		AppEnv:   getStringEnv("APP_ENV", "development"),
+		Timezone: timezone,
+	}
+
+	// Server config
+	config.Server = ServerConfig{
+		Host: getStringEnv("HOST", "0.0.0.0"),
+		Port: getIntEnv("PORT", 8080),
+	}
+
+	// Database config
+	config.Database = DatabaseConfig{
+		Host:     getStringEnv("DB_HOST", "localhost"),
+		Port:     getIntEnv("DB_PORT", 27017),
+		Username: getStringEnv("DB_USER", "mongo"),
+		Password: getStringEnv("DB_PASSWORD", "mongo"),
+		Name:     getStringEnv("DB_NAME", "linko"),
+	}
+
+	// Logging config
+	config.Logging = LoggingConfig{
+		Level:  getStringEnv("LOG_LEVEL", "info"),
+		Format: getStringEnv("LOG_FORMAT", "text"),
+	}
+
+	return config
 }
 
 // loadConfigFromFile loads configuration from YAML file

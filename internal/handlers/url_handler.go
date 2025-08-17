@@ -1,9 +1,9 @@
 package handlers
 
 import (
-	"github.com/aarondever/url-forg/internal/models"
-	"github.com/aarondever/url-forg/internal/services"
-	"github.com/aarondever/url-forg/internal/utils"
+	"github.com/aarondever/linko/internal/models"
+	"github.com/aarondever/linko/internal/services"
+	"github.com/aarondever/linko/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 )

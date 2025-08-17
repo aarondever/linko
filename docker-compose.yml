@@ -10,7 +10,7 @@ services:
       - DB_HOST=mongo
       - DB_USER=${DB_USER:-mongo}
       - DB_PASSWORD=${DB_PASSWORD:-mongo}
-      - DB_NAME=${DB_NAME:-url_forge}
+      - DB_NAME=${DB_NAME:-linko}
     depends_on:
       - mongo
 
@@ -22,7 +22,7 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${DB_USER:-mongo}
       - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD:-mongo}
-      - MONGO_INITDB_DATABASE=${DB_NAME:-url_forge}
+      - MONGO_INITDB_DATABASE=${DB_NAME:-linko}
     volumes:
       - mongo-data:/data/db
 

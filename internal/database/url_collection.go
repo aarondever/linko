@@ -3,7 +3,7 @@ package database
 import (
 	"context"
 	"errors"
-	"github.com/aarondever/url-forg/internal/models"
+	"github.com/aarondever/linko/internal/models"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"

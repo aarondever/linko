@@ -1,6 +1,6 @@
 # Go related variables
-BINARY_NAME := forge
-MAIN_PATH := ./cmd/forge
+BINARY_NAME := linko
+MAIN_PATH := ./cmd/linko
 BUILD_DIR := ./build
 TMP_DIR := ./tmp
 

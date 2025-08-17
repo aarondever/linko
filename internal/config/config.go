@@ -38,7 +38,7 @@ func Load() (*Config, error) {
 		AppEnv:   getStringEnv("APP_ENV", "development"),
 		Host:     getStringEnv("HOST", "0.0.0.0"),
 		Port:     getIntEnv("PORT", 8080),
-		DBName:   getStringEnv("DB_NAME", "url_forg"),
+		DBName:   getStringEnv("DB_NAME", "linko"),
 		Timezone: timezone,
 	}
 

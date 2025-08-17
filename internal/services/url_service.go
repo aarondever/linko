@@ -2,9 +2,9 @@ package services
 
 import (
 	"context"
-	"github.com/aarondever/url-forg/internal/config"
-	"github.com/aarondever/url-forg/internal/database"
-	"github.com/aarondever/url-forg/internal/models"
+	"github.com/aarondever/linko/internal/config"
+	"github.com/aarondever/linko/internal/database"
+	"github.com/aarondever/linko/internal/models"
 	"github.com/google/uuid"
 )
 

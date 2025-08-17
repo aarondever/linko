@@ -2,4 +2,4 @@
 set -e
 
 echo "[entrypoint] Starting application"
-exec ./forge
+exec ./linko

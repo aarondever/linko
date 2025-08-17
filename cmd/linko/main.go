@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aarondever/url-forg/internal/config"
-	"github.com/aarondever/url-forg/internal/database"
-	"github.com/aarondever/url-forg/internal/handlers"
-	"github.com/aarondever/url-forg/internal/models"
-	"github.com/aarondever/url-forg/internal/services"
-	"github.com/aarondever/url-forg/internal/utils"
+	"github.com/aarondever/linko/internal/config"
+	"github.com/aarondever/linko/internal/database"
+	"github.com/aarondever/linko/internal/handlers"
+	"github.com/aarondever/linko/internal/models"
+	"github.com/aarondever/linko/internal/services"
+	"github.com/aarondever/linko/internal/utils"
 	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
 	"net/http"
@@ -137,7 +137,7 @@ func (app *Application) initiateShutdown() {
 func (app *Application) getHealth(w http.ResponseWriter, r *http.Request) {
 	healthResponse := map[string]interface{}{
 		"status":  "healthy",
-		"service": "url-forge",
+		"service": "linko",
 	}
 	utils.RespondWithJSON(w, http.StatusOK, healthResponse)
 }

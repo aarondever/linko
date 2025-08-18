@@ -20,7 +20,9 @@ WORKDIR /root/
 
 COPY --from=builder /app/linko .
 
+VOLUME ["/etc/linko"]
+
 EXPOSE 8080
 
-ENTRYPOINT ["/root/linko"]
+ENTRYPOINT ["./linko"]
 CMD ["-config.file=/etc/linko/config.yaml"]

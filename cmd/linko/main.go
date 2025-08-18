@@ -128,15 +128,15 @@ func (app *Application) initiateShutdown() {
 		"total_uptime", app.metrics.TotalUptime)
 }
 
-func (app *Application) getHealth(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getHealth(w http.ResponseWriter, _ *http.Request) {
 	healthResponse := map[string]interface{}{
 		"status":  "healthy",
 		"service": "linko",
 	}
-	utils.RespondWithJSON(w, http.StatusOK, healthResponse)
+	utils.RespondWithJSON(w, healthResponse, http.StatusOK)
 }
 
-func (app *Application) getMetrics(w http.ResponseWriter, r *http.Request) {
+func (app *Application) getMetrics(w http.ResponseWriter, _ *http.Request) {
 	app.metrics.TotalUptime = time.Since(app.metrics.StartTime)
-	utils.RespondWithJSON(w, http.StatusOK, app.metrics)
+	utils.RespondWithJSON(w, app.metrics, http.StatusOK)
 }

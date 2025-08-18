@@ -28,39 +28,49 @@ func (handler *URLHandler) RegisterRoutes(router *chi.Mux) {
 func (handler *URLHandler) ShortenURL(responseWriter http.ResponseWriter, request *http.Request) {
 	var params models.ShortenURLRequest
 	if err := utils.DecodeRequestBody(request, &params); err != nil {
-		utils.RespondWithError(responseWriter, http.StatusBadRequest, "Invalid request body")
+		utils.RespondWithError(responseWriter, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	shortCode, err := handler.urlService.ShortenURL(request.Context(), params.URL)
 	if err != nil {
-		utils.RespondWithError(responseWriter, http.StatusInternalServerError, err.Error())
+		utils.RespondWithError(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	utils.RespondWithJSON(responseWriter, http.StatusOK, models.ShortenURLResponse{
+	utils.RespondWithJSON(responseWriter, models.ShortenURLResponse{
 		ShortCode: shortCode,
-	})
+	}, http.StatusCreated)
 }
 
 func (handler *URLHandler) GetURL(responseWriter http.ResponseWriter, request *http.Request) {
 	shortCode := request.PathValue("shortCode")
 	originalURL, err := handler.urlService.GetURL(request.Context(), shortCode)
 	if err != nil {
-		utils.RespondWithError(responseWriter, http.StatusNotFound, "URL not found")
+		utils.RespondWithError(responseWriter, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	utils.RespondWithJSON(responseWriter, http.StatusOK, models.GetURLResponse{
+	if originalURL == "" {
+		utils.RespondWithError(responseWriter, "URL not found", http.StatusNotFound)
+		return
+	}
+
+	utils.RespondWithJSON(responseWriter, models.GetURLResponse{
 		OriginalURL: originalURL,
-	})
+	}, http.StatusOK)
 }
 
 func (handler *URLHandler) RedirectShortURL(responseWriter http.ResponseWriter, request *http.Request) {
 	shortCode := request.PathValue("shortCode")
 	originalURL, err := handler.urlService.GetURL(request.Context(), shortCode)
 	if err != nil {
-		utils.RespondWithError(responseWriter, http.StatusNotFound, "URL not found")
+		utils.RespondWithError(responseWriter, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if originalURL == "" {
+		utils.RespondWithError(responseWriter, "URL not found", http.StatusNotFound)
 		return
 	}
 

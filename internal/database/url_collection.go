@@ -36,10 +36,11 @@ func (database *Database) GetURLMappingByID(ctx context.Context, id string) (*mo
 
 	var mapping models.URLMapping
 	if err = database.urlCollection.FindOne(ctx, bson.M{"_id": mappingID}).Decode(&mapping); err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			slog.Error("Failed find URL mapping", "error", err)
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, nil
 		}
 
+		slog.Error("Failed find URL mapping", "error", err)
 		return nil, err
 	}
 
@@ -64,10 +65,11 @@ func (database *Database) CreateURLShortCode(
 func (database *Database) GetURL(ctx context.Context, shortCode string) (string, error) {
 	var mapping models.URLMapping
 	if err := database.urlCollection.FindOne(ctx, bson.M{"short_code": shortCode}).Decode(&mapping); err != nil {
-		if !errors.Is(err, mongo.ErrNoDocuments) {
-			slog.Error("Failed find URL mapping", "error", err)
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return "", nil
 		}
 
+		slog.Error("Failed find URL mapping", "error", err)
 		return "", err
 	}
 
